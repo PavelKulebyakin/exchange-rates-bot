@@ -103,9 +103,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await supported_currencies_handler(update, context, page)
 
 
-@cached(base_cache)
-async def fetch_pair_conversion(base_currency: str, target_currency: str, amount: str):
+async def fetch_pair_amount_conversion(base_currency: str, target_currency: str, amount: str):
     url = f'https://v6.exchangerate-api.com/v6/{EXCHANGE_RATE_API_KEY}/pair/{base_currency}/{target_currency}/{amount}'
+    with requests.get(url) as response:
+        return response
+
+
+@cached(base_cache)
+async def fetch_pair_conversion(base_currency: str, target_currency: str):
+    url = f'https://v6.exchangerate-api.com/v6/{EXCHANGE_RATE_API_KEY}/pair/{base_currency}/{target_currency}'
     with requests.get(url) as response:
         return response
 
@@ -128,17 +134,16 @@ async def pair_conversion_handler(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_text('Код валюты должен состоять из трех латинских букв. Пример: RUB')
         return
 
-    amount = 1
-
-    if len(context.args) == 3 and not context.args[2].isdigit():
-        await update.message.reply_text('Количество валюты должно быть записано в виде цифры.\n'
-                                        'Пример: /rate RUB USD 100.')
+    if len(args) == 2:
+        amount = 1
+        api_response = await fetch_pair_conversion(base_currency, target_currency)
+    elif len(args) == 3 and args[2].isdigit():
+        amount = args[2]
+        api_response = await fetch_pair_amount_conversion(base_currency, target_currency, amount)
+    else:
+        message_text = 'Количество валюты должно быть записано в виде цифры.\nПример: /rate RUB USD 100.'
+        await update.message.reply_text(message_text)
         return
-
-    if len(context.args) == 3 and context.args[2].isdigit():
-        amount = context.args[2]
-
-    api_response = await fetch_pair_conversion(base_currency, target_currency, amount)
 
     if api_response.status_code == 404:
         error_message = 'Пожалуйста, проверьте название валюты.'
