@@ -3,9 +3,15 @@ import requests
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import CommandHandler, Application, ContextTypes, CallbackQueryHandler
+from cachetools import TTLCache, cached
 from config import TELEGRAM_TOKEN, EXCHANGE_RATE_API_KEY
 
 ITEMS_PER_PAGE = 20
+BASE_CACHE_TTL = 3600
+LONG_CACHE_TTL = 24 * 3600
+
+base_cache = TTLCache(maxsize=100, ttl=BASE_CACHE_TTL)
+long_cache = TTLCache(maxsize=1, ttl=LONG_CACHE_TTL)
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -41,6 +47,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text(help_message)
 
 
+@cached(long_cache)
 async def fetch_supported_currencies():
     url = f'https://v6.exchangerate-api.com/v6/{EXCHANGE_RATE_API_KEY}/codes'
     with requests.get(url) as response:
@@ -49,7 +56,7 @@ async def fetch_supported_currencies():
 
 async def supported_currencies_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, page: int = 0) -> None:
 
-    api_response = await fetch_supported_currencies()
+    api_response = await fetch_supported_currencies
 
     if not api_response.ok:
         await update.message.reply_text('Ошибка при получении данных. Пожалуйста, попробуйте позже.')
@@ -96,6 +103,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await supported_currencies_handler(update, context, page)
 
 
+@cached(base_cache)
 async def fetch_pair_conversion(base_currency: str, target_currency: str, amount: str):
     url = f'https://v6.exchangerate-api.com/v6/{EXCHANGE_RATE_API_KEY}/pair/{base_currency}/{target_currency}/{amount}'
     with requests.get(url) as response:
