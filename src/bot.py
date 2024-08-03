@@ -57,12 +57,8 @@ async def supported_currencies_handler(update: Update, context: ContextTypes.DEF
         return
 
     data = api_response.json()
-
-    if data['result'] == 'error':
-        await update.message.reply_text(f'Ошибка: {data["error-type"]}')
-        return
-
     supported_currencies = data['supported_codes']
+
     total_pages = (len(supported_currencies) - 1) // ITEMS_PER_PAGE
 
     start_point = page * ITEMS_PER_PAGE
