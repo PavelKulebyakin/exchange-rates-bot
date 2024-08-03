@@ -112,15 +112,18 @@ async def fetch_pair_conversion(base_currency: str, target_currency: str, amount
 
 async def pair_conversion_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
-    if not context.args or len(context.args) < 2:
+    args = context.args
+
+    if not args or len(args) < 2:
         await update.message.reply_text('Пожалуйста, укажите базовую и целевую валюты. Пример: /rate RUB USD')
         return
 
     base_currency = context.args[0]
     target_currency = context.args[1]
 
-    if not (len(base_currency) == 3 and len(target_currency) == 3
-            and base_currency.isalpha() and target_currency.isalpha()):
+    base_currency, target_currency = args[:2]
+
+    if not (is_valid_currency_code(base_currency) and is_valid_currency_code(target_currency)):
         await update.message.reply_text('Код валюты должен состоять из трех латинских букв. Пример: RUB')
         return
 
@@ -148,9 +151,14 @@ async def pair_conversion_handler(update: Update, context: ContextTypes.DEFAULT_
 
     data = api_response.json()
     conversion_result = data['conversion_result']
+
     reply_message = f"Курс обмена : {amount} {base_currency} = {conversion_result} {target_currency}"
 
     await update.message.reply_text(reply_message)
+
+
+def is_valid_currency_code(currency_code: str) -> bool:
+    return len(currency_code) == 3 and currency_code.isalpha()
 
 
 async def post_init(application: Application) -> None:
