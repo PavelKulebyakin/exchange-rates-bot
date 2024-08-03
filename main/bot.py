@@ -119,7 +119,7 @@ async def pair_conversion_handler(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_text('Слишком много аргументов. Пример: /rate RUB USD или /rate RUB USD 100')
         return
 
-    base_currency, target_currency = args[:2]
+    base_currency, target_currency = map(str.upper, args[:2])
 
     if not (is_valid_currency_code(base_currency) and is_valid_currency_code(target_currency)):
         await update.message.reply_text('Код валюты должен состоять из трех латинских букв. Пример: RUB')
