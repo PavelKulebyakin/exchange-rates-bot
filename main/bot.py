@@ -6,18 +6,18 @@ from telegram.ext import CommandHandler, Application, ContextTypes, CallbackQuer
 from cachetools import TTLCache, cached
 from config import TELEGRAM_TOKEN, EXCHANGE_RATE_API_KEY
 
+# Конфигурация
 ITEMS_PER_PAGE = 20
 BASE_CACHE_TTL = 3600
-LONG_CACHE_TTL = 24 * 3600
+LONG_CACHE_TTL = 3600 * 24
 
+# Настройка кэша
 base_cache = TTLCache(maxsize=100, ttl=BASE_CACHE_TTL)
 long_cache = TTLCache(maxsize=1, ttl=LONG_CACHE_TTL)
 
 # Настройка логирования
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logging.getLogger("httpx").setLevel(logging.WARNING)
-
 logger = logging.getLogger(__name__)
 
 
@@ -176,7 +176,7 @@ async def post_init(application: Application) -> None:
     await application.bot.set_my_commands(bot_commands)
 
 
-def main() -> None:
+def start() -> None:
 
     application = Application.builder().token(TELEGRAM_TOKEN).post_init(post_init).build()
 
@@ -193,5 +193,4 @@ def main() -> None:
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
-if __name__ == '__main__':
-    main()
+
