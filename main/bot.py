@@ -3,17 +3,12 @@ import requests
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import CommandHandler, Application, ContextTypes, CallbackQueryHandler
-from cachetools import TTLCache, cached
+
 from config import TELEGRAM_TOKEN, EXCHANGE_RATE_API_KEY
 
 # Конфигурация
 ITEMS_PER_PAGE = 20
-BASE_CACHE_TTL = 3600
-LONG_CACHE_TTL = 3600 * 24
 
-# Настройка кэша
-base_cache = TTLCache(maxsize=100, ttl=BASE_CACHE_TTL)
-long_cache = TTLCache(maxsize=1, ttl=LONG_CACHE_TTL)
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -47,7 +42,6 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text(help_message)
 
 
-@cached(long_cache)
 async def fetch_supported_currencies():
     url = f'https://v6.exchangerate-api.com/v6/{EXCHANGE_RATE_API_KEY}/codes'
     with requests.get(url) as response:
@@ -56,7 +50,7 @@ async def fetch_supported_currencies():
 
 async def supported_currencies_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, page: int = 0) -> None:
 
-    api_response = await fetch_supported_currencies
+    api_response = await fetch_supported_currencies()
 
     if not api_response.ok:
         await update.message.reply_text('Ошибка при получении данных. Пожалуйста, попробуйте позже.')
@@ -71,9 +65,9 @@ async def supported_currencies_handler(update: Update, context: ContextTypes.DEF
     supported_currencies = data['supported_codes']
     total_pages = (len(supported_currencies) - 1) // ITEMS_PER_PAGE
 
-    start = page * ITEMS_PER_PAGE
-    end = start + ITEMS_PER_PAGE
-    paginated_supported_currencies = supported_currencies[start:end]
+    start_point = page * ITEMS_PER_PAGE
+    end_point = start_point + ITEMS_PER_PAGE
+    paginated_supported_currencies = supported_currencies[start_point:end_point]
 
     rate_message = f'Поддерживаемые валюты (стр. {page + 1}/{total_pages + 1}) :\n\n'
     for currency in paginated_supported_currencies:
@@ -103,15 +97,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await supported_currencies_handler(update, context, page)
 
 
-async def fetch_pair_amount_conversion(base_currency: str, target_currency: str, amount: str):
+def is_valid_currency_code(currency_code: str) -> bool:
+    return len(currency_code) == 3 and currency_code.isalpha()
+
+
+async def fetch_pair_conversion(base_currency: str, target_currency: str, amount: str = "1"):
     url = f'https://v6.exchangerate-api.com/v6/{EXCHANGE_RATE_API_KEY}/pair/{base_currency}/{target_currency}/{amount}'
-    with requests.get(url) as response:
-        return response
-
-
-@cached(base_cache)
-async def fetch_pair_conversion(base_currency: str, target_currency: str):
-    url = f'https://v6.exchangerate-api.com/v6/{EXCHANGE_RATE_API_KEY}/pair/{base_currency}/{target_currency}'
     with requests.get(url) as response:
         return response
 
@@ -139,7 +130,7 @@ async def pair_conversion_handler(update: Update, context: ContextTypes.DEFAULT_
         api_response = await fetch_pair_conversion(base_currency, target_currency)
     elif len(args) == 3 and args[2].isdigit():
         amount = args[2]
-        api_response = await fetch_pair_amount_conversion(base_currency, target_currency, amount)
+        api_response = await fetch_pair_conversion(base_currency, target_currency, amount)
     else:
         message_text = 'Количество валюты должно быть записано в виде цифры.\nПример: /rate RUB USD 100.'
         await update.message.reply_text(message_text)
@@ -161,10 +152,6 @@ async def pair_conversion_handler(update: Update, context: ContextTypes.DEFAULT_
     reply_message = f"Курс обмена : {amount} {base_currency} = {conversion_result} {target_currency}"
 
     await update.message.reply_text(reply_message)
-
-
-def is_valid_currency_code(currency_code: str) -> bool:
-    return len(currency_code) == 3 and currency_code.isalpha()
 
 
 async def post_init(application: Application) -> None:
@@ -191,6 +178,3 @@ def start() -> None:
     application.add_handlers(handlers)
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
-
-
-
