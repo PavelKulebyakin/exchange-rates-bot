@@ -16,12 +16,29 @@ logger = logging.getLogger(__name__)
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
-        'Привет! Я бот для получения курса валют. Введите /rate <валюта>, чтобы узнать курс.')
+    start_message = (
+        "👋 Привет! Я бот для получения курса валют.\n\n"
+        "Вот список полезных команд:\n\n"
+        "💱 /rate - Получить текущий курс обмена между двумя валютами.\n"
+        "📋 /list - Получить список поддерживаемых валют.\n"
+        "❓ /help - Показать дополнительную информацию.\n\n"
+    )
+    await update.message.reply_text(start_message)
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Help!")
+    help_message = (
+        "👋 Добро пожаловать! Я ваш бот для получения информации о курсах валют.\n\n"
+        "Вот список доступных команд:\n\n"
+        "💱 /rate  - Получить текущий курс обмена между двумя валютами.\n"
+        "📋 /list  - Получить список всех поддерживаемых валют.\n"
+        "❓ /help  - Показать дополнительную информацию.\n"
+        "💡 /start - Начать работу с ботом и получить приветственное сообщение.\n\n"
+        "Примеры использования команды /rate:\n\n"
+        "🔹 Если вы хотите узнать курс обмена из долларов США (USD) в российские рубли (RUB), введите: /rate USD RUB\n"
+        "🔹 Если вы хотите узнать перевести 100 евро (EUR) в японские иены (JPY), введите: /rate EUR JPY 100\n\n"
+    )
+    await update.message.reply_text(help_message)
 
 
 async def fetch_supported_currencies():
@@ -111,17 +128,17 @@ async def pair_conversion_handler(update: Update, context: ContextTypes.DEFAULT_
 
     api_response = await fetch_pair_conversion(base_currency, target_currency, amount)
 
+    if api_response.status_code == 404:
+        error_message = 'Пожалуйста, проверьте название валюты.'
+        await update.message.reply_text(error_message)
+        return
+
     if not api_response.ok:
-        await update.message.reply_text('Ошибка при получении данных. '
-                                        'Пожалуйста, проверьте данные или попробуйте позже.')
+        error_message = 'Ошибка при получении данных.\nПожалуйста, попробуйте позже.'
+        await update.message.reply_text(error_message)
         return
 
     data = api_response.json()
-
-    if data['result'] == 'error':
-        await update.message.reply_text(f'Ошибка: {data["error-type"]}')
-        return
-
     conversion_result = data['conversion_result']
     reply_message = f"Курс обмена : {amount} {base_currency} = {conversion_result} {target_currency}"
 
