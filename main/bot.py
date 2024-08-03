@@ -118,8 +118,9 @@ async def pair_conversion_handler(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_text('Пожалуйста, укажите базовую и целевую валюты. Пример: /rate RUB USD')
         return
 
-    base_currency = context.args[0]
-    target_currency = context.args[1]
+    if len(args) > 3:
+        await update.message.reply_text('Слишком много аргументов. Пример: /rate RUB USD или /rate RUB USD 100')
+        return
 
     base_currency, target_currency = args[:2]
 
