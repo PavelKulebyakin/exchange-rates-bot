@@ -1,5 +1,5 @@
 import logging
-import requests
+from aiohttp import ClientSession
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import CommandHandler, Application, ContextTypes, CallbackQueryHandler
@@ -43,9 +43,10 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def fetch_supported_currencies():
-    url = f'https://v6.exchangerate-api.com/v6/{EXCHANGE_RATE_API_KEY}/codes'
-    with requests.get(url) as response:
-        return response
+    async with ClientSession() as session:
+        url = f'https://v6.exchangerate-api.com/v6/{EXCHANGE_RATE_API_KEY}/codes'
+        async with session.get(url) as api_response:
+            return api_response
 
 
 async def supported_currencies_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, page: int = 0) -> None:
@@ -56,7 +57,7 @@ async def supported_currencies_handler(update: Update, context: ContextTypes.DEF
         await update.message.reply_text('Ошибка при получении данных. Пожалуйста, попробуйте позже.')
         return
 
-    data = api_response.json()
+    data = await api_response.json()
     supported_currencies = data['supported_codes']
 
     total_pages = (len(supported_currencies) - 1) // ITEMS_PER_PAGE
@@ -97,10 +98,11 @@ def is_valid_currency_code(currency_code: str) -> bool:
     return len(currency_code) == 3 and currency_code.isalpha()
 
 
-async def fetch_pair_conversion(base_currency: str, target_currency: str, amount: str = "1"):
-    url = f'https://v6.exchangerate-api.com/v6/{EXCHANGE_RATE_API_KEY}/pair/{base_currency}/{target_currency}/{amount}'
-    with requests.get(url) as response:
-        return response
+async def fetch_pair_conversion(base: str, target: str, amount: str = "1"):
+    async with ClientSession() as session:
+        url = f'https://v6.exchangerate-api.com/v6/{EXCHANGE_RATE_API_KEY}/pair/{base}/{target}/{amount}'
+        async with session.get(url) as api_response:
+            return api_response
 
 
 async def pair_conversion_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -132,7 +134,7 @@ async def pair_conversion_handler(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_text(message_text)
         return
 
-    if api_response.status_code == 404:
+    if api_response.status == 404:
         error_message = 'Пожалуйста, проверьте название валюты.'
         await update.message.reply_text(error_message)
         return
@@ -142,7 +144,7 @@ async def pair_conversion_handler(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_text(error_message)
         return
 
-    data = api_response.json()
+    data = await api_response.json()
     conversion_result = data['conversion_result']
 
     reply_message = f"Курс обмена : {amount} {base_currency} = {conversion_result} {target_currency}"
@@ -151,17 +153,19 @@ async def pair_conversion_handler(update: Update, context: ContextTypes.DEFAULT_
 
 
 async def post_init(application: Application) -> None:
+
     bot_commands = [
         BotCommand("rate", "Получить курс валют"),
         BotCommand("list", "Список поддерживаемых валют"),
         BotCommand("help", "Помощь")
     ]
+
     await application.bot.set_my_commands(bot_commands)
 
 
 def start() -> None:
 
-    application = Application.builder().token(TELEGRAM_TOKEN).post_init(post_init).build()
+    application = Application.builder().token(TELEGRAM_TOKEN).concurrent_updates(True).post_init(post_init).build()
 
     handlers = [
         CommandHandler("start", start_handler),
