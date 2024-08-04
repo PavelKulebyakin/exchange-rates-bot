@@ -72,7 +72,7 @@
 4. Запустите бота:
 
     ```sh
-    python main/bot.py
+    python src/bot.py
     ```
 
 ### Запуск с использованием Docker
@@ -87,8 +87,8 @@
 2. Создайте файл `.env` в корневой директории и добавьте следующие строки, заменив `your_telegram_token_here` и `your_exchange_rate_api_key_here` на ваши реальные значения:
 
     ```env
-    TELEGRAM_TOKEN=your_telegram_token_here
-    EXCHANGE_RATE_API_KEY=your_exchange_rate_api_key_here
+    TELEGRAM_TOKEN=<your_telegram_token_here>
+    EXCHANGE_RATE_API_KEY=<your_exchange_rate_api_key_here>
     ```
 
 3. Постройте и запустите контейнер Docker:
@@ -97,3 +97,16 @@
     docker-compose up --build
     ```
 
+### Загрузка Docker образа
+
+1. Для загрузки Docker образа из GitHub Container Registry используйте следующую команду:
+
+```sh
+docker pull ghcr.io/pavelkulebyakin/exchange-rates-bot:latest
+```
+
+2. После загрузки образа можно запустить Docker контейнер с помощью следующей команды:
+
+```sh
+docker run -d --name bot-container -e TELEGRAM_TOKEN=<your_telegram_token_here> -e EXCHANGE_RATE_API_KEY=<your_exchange_rate_api_key_here> ghcr.io/pavelkulebyakin/exchange-rates-bot:latest
+```
